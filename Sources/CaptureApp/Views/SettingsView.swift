@@ -47,6 +47,7 @@ struct SettingsView: View {
                                 .foregroundColor(.gray)
                             Button("Abmelden") {
                                 appEnvironment.authService.logout()
+                                dismiss()
                             }
                             .foregroundColor(.red)
                             .font(.system(size: 14, weight: .semibold))
@@ -73,6 +74,45 @@ struct SettingsView: View {
                                 Text("English").tag("en")
                             }
                             .pickerStyle(.segmented)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Synchronisierung")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                            
+                            HStack {
+                                if appEnvironment.syncEngine?.isSyncing ?? false {
+                                    HStack(spacing: 6) {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                        Text("Synchronisierung...")
+                                            .font(.system(size: 13, weight: .regular))
+                                            .foregroundColor(.blue)
+                                    }
+                                } else {
+                                    Button(action: {
+                                        appEnvironment.syncEngine?.manualSync()
+                                    }) {
+                                        HStack {
+                                            Image(systemName: "arrow.2.circlepath")
+                                            Text("Jetzt Synchronisieren")
+                                        }
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 36)
+                                        .foregroundColor(.blue)
+                                        .border(Color.blue.opacity(0.3), width: 1)
+                                        .cornerRadius(8)
+                                    }
+                                }
+                            }
+                            
+                            if let lastSync = appEnvironment.syncEngine?.lastSyncDate {
+                                Text("Letzte Sync: \(lastSync.formatted(date: .abbreviated, time: .shortened))")
+                                    .font(.system(size: 11, weight: .regular))
+                                    .foregroundColor(.gray)
+                            }
                         }
                         
                         VStack(alignment: .leading, spacing: 8) {
