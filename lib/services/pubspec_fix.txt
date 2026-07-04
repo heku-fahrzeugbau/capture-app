@@ -1,0 +1,3 @@
+# Add connectivity_plus to dependencies if not there
+dependencies:
+  connectivity_plus: ^5.1.0
