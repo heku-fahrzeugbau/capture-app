@@ -16,12 +16,13 @@ struct ContentView: View {
                     Group {
                         if currentTab == .home {
                             HomeView()
+                                .environmentObject(appEnvironment.storageService)
                         } else {
                             ArchiveView()
+                                .environmentObject(appEnvironment.storageService)
                         }
                     }
                     
-                    // Tab indicator (optional, subtle)
                     VStack {
                         Spacer()
                         HStack(spacing: 8) {
@@ -40,12 +41,10 @@ struct ContentView: View {
                     DragGesture()
                         .onEnded { gesture in
                             if gesture.translation.width > 50 {
-                                // Swipe right → Archive
                                 withAnimation {
                                     currentTab = .archive
                                 }
                             } else if gesture.translation.width < -50 {
-                                // Swipe left → Home
                                 withAnimation {
                                     currentTab = .home
                                 }
@@ -57,7 +56,6 @@ struct ContentView: View {
                     .environmentObject(appEnvironment.authService)
             }
         }
-        .environmentObject(appEnvironment)
     }
 }
 

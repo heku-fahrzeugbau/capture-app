@@ -1,9 +1,14 @@
 import SwiftUI
 
 struct HomeView: View {
+    @StateObject private var voiceService = VoiceService()
     @State private var noteText = ""
-    @State private var isRecording = false
     @State private var showSettings = false
+    @EnvironmentObject var storageService: OfflineStorageService
+    
+    var isRecording: Bool {
+        voiceService.isListening
+    }
     
     var body: some View {
         ZStack {
@@ -19,12 +24,31 @@ struct HomeView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
                 
-                VStack {
-                    Text("Notiz bereit")
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundColor(.gray)
+                VStack(spacing: 8) {
+                    if isRecording {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 8, height: 8)
+                            
+                            Text("Aufzeichnung läuft...")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.red)
+                        }
+                    } else if !voiceService.transcript.isEmpty {
+                        Text(voiceService.transcript)
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundColor(.white)
+                            .lineLimit(4)
+                    } else {
+                        Text("Notiz bereit")
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundColor(.gray)
+                    }
                 }
                 .frame(maxHeight: .infinity)
+                .frame(maxWidth: .infinity)
+                .padding(16)
                 
                 HStack(spacing: 8) {
                     Text("+")
@@ -34,14 +58,22 @@ struct HomeView: View {
                     TextField("Notiz aufzeichnen...", text: $noteText)
                         .font(.system(size: 14, weight: .regular))
                         .foregroundColor(.white)
+                        .disabled(isRecording)
                     
-                    Button(action: {}) {
-                        Image(systemName: "mic.fill")
+                    Button(action: {
+                        if isRecording {
+                            voiceService.stopListening()
+                            noteText = voiceService.transcript
+                        } else {
+                            voiceService.startListening()
+                        }
+                    }) {
+                        Image(systemName: isRecording ? "stop.fill" : "mic.fill")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.gray)
+                            .foregroundColor(isRecording ? .red : .gray)
                     }
                     
-                    Button(action: {}) {
+                    Button(action: saveNote) {
                         Image(systemName: "paperplane.fill")
                             .font(.system(size: 14, weight: .semibold))
                             .frame(width: 32, height: 32)
@@ -49,6 +81,7 @@ struct HomeView: View {
                             .foregroundColor(.white)
                             .cornerRadius(16)
                     }
+                    .disabled(noteText.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
                 .padding(.vertical, 10)
                 .padding(.horizontal, 12)
@@ -57,10 +90,28 @@ struct HomeView: View {
                 .cornerRadius(24)
                 .padding(.horizontal, 16)
                 
-                Text("Online • 0 pending")
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundColor(.gray)
-                    .padding(.bottom, 16)
+                if let error = voiceService.error {
+                    Text(error)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(.red)
+                        .padding(.horizontal, 16)
+                }
+                
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 6, height: 6)
+                    Text("Online")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(.green)
+                    
+                    if !storageService.pendingNotes.isEmpty {
+                        Text("• \(storageService.pendingNotes.count) pending")
+                            .font(.system(size: 12, weight: .regular))
+                            .foregroundColor(.gray)
+                    }
+                }
+                .padding(.bottom, 16)
             }
             .background(Color(red: 0, green: 0, blue: 0))
             
@@ -71,8 +122,26 @@ struct HomeView: View {
         }
         .ignoresSafeArea()
     }
+    
+    private func saveNote() {
+        let content = noteText.trimmingCharacters(in: .whitespaces)
+        guard !content.isEmpty else { return }
+        
+        let title = MarkdownGenerator.extractTitle(from: content)
+        let note = Note(
+            title: title,
+            content: content,
+            timestamp: Date(),
+            syncStatus: .pending
+        )
+        
+        storageService.saveNote(note)
+        noteText = ""
+        voiceService.transcript = ""
+    }
 }
 
 #Preview {
     HomeView()
+        .environmentObject(OfflineStorageService())
 }
